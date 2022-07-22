@@ -1,0 +1,10 @@
+ISRL - CTN
+(Demo version for call centre recordings)
+
+TDNN model for running ASR on 16 kHz audio
+
+
+References:
+http://danielpovey.com/files/2020_interspeech_multistream.pdf
+
+

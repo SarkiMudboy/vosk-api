@@ -1,0 +1,5 @@
+Collecting websockets
+  Downloading websockets-10.3-cp38-cp38-win_amd64.whl (98 kB)
+     -------------------------------------- 98.6/98.6 KB 246.1 kB/s eta 0:00:00
+Installing collected packages: websockets
+Successfully installed websockets-10.3
