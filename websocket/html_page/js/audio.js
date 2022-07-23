@@ -1,32 +1,53 @@
+
+let dataArray = [];
+var recording = true;
+
 const main = async () => {
+
   const context = new AudioContext()
   const microphone = await navigator.mediaDevices.getUserMedia({
     audio:true
   })
-  console.log(microphone)
+
+  let sampleRate = 16000
+  let numOfChannels = 1
+
   const source = context.createMediaStreamSource(microphone)
-  // const source = new MediaStreamAudioSourceNode(context, {
-  //   mediaStream: stream // Your stream here.
-  // });
 
   await context.audioWorklet.addModule('js/recorderWorkletProcessor.js')
-  console.log(source)
 
   const recorder = new AudioWorkletNode(context, "recorder.worklet")
 
   source.connect(recorder).connect(context.destination)
 
   recorder.port.onmessage = (e) => {
-    // console.log(e.data)
-    let dataView = encodeWAV(e.data, context)
-    let blob = new Blob([ dataView ], { type: 'audio/wav' });
-    console.log(blob)
-    upload(blob)
-  }
 
-  // source.start()
+
+    // downsample to 16KHz sample rate
+    downSampledData = downsampleBuffer(e.data, sampleRate, context.sampleRate)
+
+    // convert to audio/wav format
+    let dataView = encodeWAV(downSampledData, context, sampleRate)
+  
+    dataArray.push(e.data)
+
+    // Create a blob file
+    let blob = new Blob([ dataView ], { type: 'audio/wav' });
+
+    // send to the server
+    upload(blob)
+  
+    if (!recording){
+
+      console.log("RECORDING STOPPED");
+      recorder.disconnect(context.destination);
+      source.disconnect(recorder);
+
+    }
+  }
 };
 
+// sorry I am not using this but floatTo16BitPCM()
 function convertFloat32To16BitPCM(input) {
   const output = new Int16Array(input.length)
 
@@ -40,15 +61,17 @@ function convertFloat32To16BitPCM(input) {
 }
 
 function startRec () {
+  // start the recording
   main()
 }
 
 function stopRec () {
+  // stop the recording
   console.log('stopped')
-  return
+  recording = false
 }
 
-
+// convert to 16Bit PCM
 function floatTo16BitPCM(output, offset, input){
     for (var i = 0; i < input.length; i++, offset+=2){
         var s = Math.max(-1, Math.min(1, input[i]));
@@ -62,8 +85,8 @@ function writeString(view, offset, string){
     }
 }
 
-
-function encodeWAV(samples, context) {
+// convert to wave format
+function encodeWAV(samples, context, sampleRate) {
     let buffer = new ArrayBuffer(44 + samples.length * 2);
     let view = new DataView(buffer);
 
@@ -82,9 +105,9 @@ function encodeWAV(samples, context) {
     /* channel count */
     view.setUint16(22, 1, true);
     /* sample rate */
-    view.setUint32(24, context.sampleRate, true);
+    view.setUint32(24, sampleRate, true);
     /* byte rate (sample rate * block align) */
-    view.setUint32(28, context.sampleRate * 4, true);
+    view.setUint32(28, sampleRate * 4, true);
     /* block align (channel count * bytes per sample) */
     view.setUint16(32, 1 * 2, true);
     /* bits per sample */
@@ -100,6 +123,7 @@ function encodeWAV(samples, context) {
 }
 
 const blobToBase64 = (blob) => {
+  // convert blob to base64 encoding
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.readAsDataURL(blob);
@@ -111,20 +135,52 @@ const blobToBase64 = (blob) => {
 
 const upload = async (audioData) => {
 
+        // send the blob containing audio bytes to the flask server
+
         var AjaxURL = 'http://127.0.0.1:5000/media';
 
         const b64 = await blobToBase64(audioData);
+        
         const jsonString = JSON.stringify({blob: b64});
 
         console.log(jsonString);
-
+        
         $.ajax({
         type: "POST",
         url: AjaxURL,
         data: jsonString,
         contentType: 'application/json;charset=UTF-8',
         success: function(result) {
-            window.console.log(result);
+            window.console.log(result.response);
         }
 });
+}
+
+function downsampleBuffer(buffer, rate, sampleRate) {
+  if (rate == sampleRate) {
+      return buffer;
+  }
+  if (rate > sampleRate) {
+      throw "downsampling rate show be smaller than original sample rate";
+  }
+  var sampleRateRatio = sampleRate / rate;
+  var newLength = Math.round(buffer.length / sampleRateRatio);
+  var result = new Float32Array(newLength);
+  var offsetResult = 0;
+  var offsetBuffer = 0;
+  while (offsetResult < result.length) {
+      var nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+       // Use average value of skipped samples
+      var accum = 0, count = 0;
+      for (var i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+      }
+      result[offsetResult] = accum / count;
+      // Or you can simply get rid of the skipped samples:
+      // result[offsetResult] = buffer[nextOffsetBuffer];
+      offsetResult++;
+      offsetBuffer = nextOffsetBuffer;
+  }
+  return result;
 }

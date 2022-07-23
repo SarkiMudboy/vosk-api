@@ -85,7 +85,8 @@ async def recognize(websocket, path):
             if spk_model:
                 rec.SetSpkModel(spk_model)
 
-        response, stop = await loop.run_in_executor(pool, process_chunk, rec, message)
+        print(sample_rate)
+        response = await loop.run_in_executor(pool, process_chunk, rec, message)
         await websocket.send(response)
     await websocket.send('<EOF>')
 

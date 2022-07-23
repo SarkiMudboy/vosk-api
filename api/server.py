@@ -11,7 +11,7 @@ import base64
 import asyncio
 import websockets
 import sys
-import io
+import wave
 
 app = Flask(__name__)
 app.secret_key = "stream"
@@ -21,7 +21,6 @@ def get_byte_string(string):
 
 	delimiter = ';base64,'
 	splitted_string = string.split(delimiter)
-	# print(splitted_string[1])
 	return splitted_string[1]
 
 
@@ -50,38 +49,27 @@ async def echo():
 
 		byte_str = bytes(byte_str, 'utf-8')
 
-		print(byte_str)
-
 		chunk = base64.decodebytes(byte_str)
 
 		has_seen_media = True
 	
-	# if has_seen_media:
+	if has_seen_media:
 
-	# 	app.logger.info("Payload recieved: {} bytes".format(len(chunk)))
+		app.logger.info("Payload recieved: {} bytes".format(len(chunk)))
 
-	# 	# set up websocket here
+		# set up websocket here
 
-	# 	async with websockets.connect('ws://localhost:2700') as websocket:
-			
-	# 		config_data = json.dumps({'sample_rate': 0})
+		async with websockets.connect('ws://localhost:2700') as websocket:
 
-	# 		await websocket.send(config_data)
+			await websocket.send(chunk)
+			print (await websocket.recv())
 
-# 			print(type(data), data)
+		await websocket.send('{"eof" : 1}')
+		print (await websocket.recv())
 
-# 			if len(chunk) == 0:
-# 				break
+		message_count += 1
 
-# 			await websocket.send(chunk)
-# 			print (await websocket.recv())
-
-# 		await websocket.send('{"eof" : 1}')
-# 		print (await websocket.recv())
-
-	# 		message_count += 1
-
-	return jsonify({'rats': 'snitches'})
+	return jsonify({'response': ''})
 
 if __name__ == '__main__':
 

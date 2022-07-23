@@ -22,6 +22,7 @@ class RecorderProcessor extends AudioWorkletProcessor {
     this.append(inputs[0][0])
     return true
   }
+  
   append(channelData){
 
     if (this.isBufferFull()){
@@ -33,7 +34,6 @@ class RecorderProcessor extends AudioWorkletProcessor {
         this._buffer[this._bytesWritten++] = channelData[i]
     }
   }
-
 
   flush () {
     this.port.postMessage(
