@@ -8,6 +8,8 @@ let constraints = {
 };
 let failedToGetUserMedia = false;
 let recContext = null
+let recSource = null
+let recNode = null;
 
 if (navigator.getUserMedia) {
     navigator.getUserMedia(constraints, (stream) => {
@@ -31,20 +33,22 @@ else failedToGetUserMedia = true;
 
 
 function beginRecording() {
+
+    if (!listening) {   
+        listening = true;
+        recLength = 0;
+    }
     recBuffers = [[], []];
-    recLength = 0;
-    listening = true;
     console.log('recording....')
-    // timeout = setTimeout(() => {
-    //     endRecording();
-    // }, 30);
+    timeout = setTimeout(() => {
+        endRecording();
+    }, 2000);
 }
 
 function endRecording() {
 
-    console.log("RECORDING STOPPED");
     clearTimeout(timeout);
-    timeout = null;
+    // timeout = null;
 
     audioBlob = exportWAV(false);
     // console.log(audioBlob)
@@ -55,6 +59,18 @@ function endRecording() {
     const audioUrl = URL.createObjectURL(audioBlobToPlay);
     const audio = new Audio(audioUrl);
     audio.play();
+    
+    beginRecording()
+    
+}
+
+function stopRec(){
+    clearTimeout(timeout);
+    timeout = null;
+    console.log("RECORDING STOPPED");
+    listening = false
+    recNode.disconnect(recContext.destination)
+    recSource.disconnect(recNode)
 }
 
 async function init(stream) {
@@ -73,11 +89,16 @@ async function init(stream) {
         }
 
         recLength += recBuffers[0][0].length;
+
     }
+
     source.connect(node);
     node.connect(context.destination);
     console.log(context.sampleRate)
+
     recContext = context
+    recNode = node
+    recSource = source
 }
 
 function mergeBuffers(buffers, len) {
@@ -120,7 +141,7 @@ function exportWAV(toPlay) {
     let blob = new Blob([ dataView ], { type: 'audio/wav' });
     blob.name = Math.floor((new Date()).getTime() / 1000) + '.wav';
 
-    listening = false;
+    // listening = false;
 
     return blob;
 }
@@ -176,25 +197,33 @@ function encodeWAV(samples, context){
 
 const upload = async (audioData) => {
 
-        var AjaxURL = 'http://127.0.0.1:5000/media';
+    var AjaxURL = 'http://127.0.0.1:5000/media';
 
-        var form = new FormData()
-        
-        form.append('file', audioData, 'file')
-        
-        $.ajax({
-        type: "POST",
-        url: AjaxURL,
-        data: form,
-        processData: false,
-        contentType: false,
-        // contentType: 'application/json;charset=UTF-8',
-        success: function(result) {
+    var form = new FormData()
+    
+    form.append('file', audioData, 'file')
+    
+    $.ajax({
+    type: "POST",
+    url: AjaxURL,
+    data: form,
+    processData: false,
+    contentType: false,
+    // contentType: 'application/json;charset=UTF-8',
+    success: function(result) {
+
+        if (result.response.trim() !== 0){
             window.console.log(result.response);
             textbox = document.getElementById('output_text')
-            textbox.value = result.response
+
+            if (textbox.value.length == 0 && textbox.value.trim() !== 0){
+                textbox.value = result.response
+            }else{
+                textbox.value += " " + result.response
+            }
         }
-});
+    }
+    });
 }
 
 // ----------------------------
