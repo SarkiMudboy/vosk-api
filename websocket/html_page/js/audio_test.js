@@ -45,12 +45,14 @@ function endRecording() {
     console.log("RECORDING STOPPED");
     clearTimeout(timeout);
     timeout = null;
-    audioBlob = exportWAV();
-    console.log(audioBlob)
 
+    audioBlob = exportWAV(false);
+    // console.log(audioBlob)
     upload(audioBlob)
-    
-    const audioUrl = URL.createObjectURL(audioBlob);
+
+    audioBlobToPlay = exportWAV(true)
+
+    const audioUrl = URL.createObjectURL(audioBlobToPlay);
     const audio = new Audio(audioUrl);
     audio.play();
 }
@@ -104,14 +106,15 @@ function interleave(inputL, inputR) {
     return result;
 }
 
-function exportWAV() {
+function exportWAV(toPlay) {
     let buffers = [];
     for (var i = 0; i < numChannels; i++) {
         buffers.push(mergeBuffers(recBuffers[i], recLength));
     }
 
-    buffers[0] = downsampleBuffer(buffers[0], 16000, 48000)
-
+    if (!toPlay){
+        buffers[0] = downsampleBuffer(buffers[0], 16000, 48000)
+    }
     let interleaved = numChannels == 2 ? interleave(buffers[0], buffers[1]) : buffers[0];
     let dataView = encodeWAV(interleaved, recContext);
     let blob = new Blob([ dataView ], { type: 'audio/wav' });
