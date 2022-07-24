@@ -28,20 +28,28 @@ const main = async () => {
 
     // convert to audio/wav format
     let dataView = encodeWAV(downSampledData, context, sampleRate)
-  
-    dataArray.push(e.data)
 
-    // Create a blob file
-    let blob = new Blob([ dataView ], { type: 'audio/wav' });
+    // dataView = convertFloat32To16BitPCM(downSampledData)
 
-    // send to the server
-    upload(blob)
+    dataArray.push(dataView)
+
+    // // Create a blob file
+    // let blob = new Blob([ dataView ], { type: 'audio/wav' });
+
+    // // send to the server
+    // upload(blob)
   
     if (!recording){
 
       console.log("RECORDING STOPPED");
       recorder.disconnect(context.destination);
       source.disconnect(recorder);
+
+      // Create a blob file
+      let blob = new Blob(dataArray, { type: 'audio/wav' });
+
+      // send to the server
+      upload(blob)
 
     }
   }
@@ -139,17 +147,23 @@ const upload = async (audioData) => {
 
         var AjaxURL = 'http://127.0.0.1:5000/media';
 
-        const b64 = await blobToBase64(audioData);
-        
-        const jsonString = JSON.stringify({blob: b64});
+        // const b64 = await blobToBase64(audioData);
 
-        console.log(jsonString);
+        var form = new FormData()
+        
+        form.append('file', audioData, 'file')
+
+        // const jsonString = JSON.stringify({blob: b64});
+
+        // console.log(jsonString);
         
         $.ajax({
         type: "POST",
         url: AjaxURL,
-        data: jsonString,
-        contentType: 'application/json;charset=UTF-8',
+        data: form,
+        processData: false,
+        contentType: false,
+        // contentType: 'application/json;charset=UTF-8',
         success: function(result) {
             window.console.log(result.response);
         }

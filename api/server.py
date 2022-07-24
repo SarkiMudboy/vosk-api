@@ -10,8 +10,8 @@ import logging
 import base64
 import asyncio
 import websockets
-import sys
-import wave
+import struct
+import array
 
 app = Flask(__name__)
 app.secret_key = "stream"
@@ -23,6 +23,14 @@ def get_byte_string(string):
 	splitted_string = string.split(delimiter)
 	return splitted_string[1]
 
+def convert(raw_floats):
+	data = raw_floats
+	floats = array.array('f', data)
+	print(floats)
+	samples = [int(sample * 32767) for sample in floats]
+	raw_ints = struct.pack('<%dh' % len(samples), *samples)
+	return raw_ints
+
 
 @app.route('/media', methods=['POST'])
 async def echo():
@@ -33,7 +41,9 @@ async def echo():
 	message_count = 0
 	chunk = None
 
-	data = json.loads(request.data)
+	data = request.files.get('file').read()
+
+	# app.logger.debug(data)
 
 	if data is None:
 		
@@ -43,25 +53,22 @@ async def echo():
 
 		app.logger.info("Media message recieved")
 
-		blob = data['blob']
-
-		byte_str = get_byte_string(blob)
-
-		byte_str = bytes(byte_str, 'utf-8')
-
-		chunk = base64.decodebytes(byte_str)
+		# new_data = convert(data)
+		
+		with open('fileblob1.wav', 'wb') as f:
+			f.write(data)
 
 		has_seen_media = True
 	
 	if has_seen_media:
 
-		app.logger.info("Payload recieved: {} bytes".format(len(chunk)))
+		app.logger.info("Payload recieved: {} bytes".format(len(data)))
 
 		# set up websocket here
 
 		async with websockets.connect('ws://localhost:2700') as websocket:
 
-			await websocket.send(chunk)
+			await websocket.send(data)
 			print (await websocket.recv())
 
 		await websocket.send('{"eof" : 1}')
