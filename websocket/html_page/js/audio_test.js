@@ -49,7 +49,7 @@ function endRecording() {
     console.log(audioBlob)
 
     upload(audioBlob)
-
+    
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
     audio.play();
@@ -188,6 +188,8 @@ const upload = async (audioData) => {
         // contentType: 'application/json;charset=UTF-8',
         success: function(result) {
             window.console.log(result.response);
+            textbox = document.getElementById('output_text')
+            textbox.value = result.response
         }
 });
 }

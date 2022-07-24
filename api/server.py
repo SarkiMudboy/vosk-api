@@ -52,11 +52,9 @@ async def echo():
 	else:
 
 		app.logger.info("Media message recieved")
-
-		# new_data = convert(data)
 		
-		with open('fileblob1.wav', 'wb') as f:
-			f.write(data)
+		# with open('fileblob1.wav', 'wb') as f:
+		# 	f.write(data)
 
 		has_seen_media = True
 	
@@ -69,14 +67,21 @@ async def echo():
 		async with websockets.connect('ws://localhost:2700') as websocket:
 
 			await websocket.send(data)
-			print (await websocket.recv())
+			vosk_response = await websocket.recv()
 
-		await websocket.send('{"eof" : 1}')
-		print (await websocket.recv())
+			partial = json.loads(vosk_response)
 
-		message_count += 1
+			if 'text' in partial:
+				response_text = partial['text']
+			else:
+				response_text = partial['partial']
 
-	return jsonify({'response': ''})
+			return jsonify({'response': response_text})
+
+		# await websocket.send('{"eof" : 1}')
+		# print(await websocket.recv())
+
+		# message_count += 1
 
 if __name__ == '__main__':
 
