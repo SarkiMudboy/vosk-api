@@ -47,13 +47,14 @@ function beginRecording() {
 
 function endRecording() {
 
-    clearTimeout(timeout);
+    // clearTimeout(timeout);
     // timeout = null;
 
     audioBlob = exportWAV(false);
     // console.log(audioBlob)
     upload(audioBlob)
 
+    // this one is for playing the file back
     audioBlobToPlay = exportWAV(true)
 
     const audioUrl = URL.createObjectURL(audioBlobToPlay);
@@ -212,11 +213,11 @@ const upload = async (audioData) => {
     // contentType: 'application/json;charset=UTF-8',
     success: function(result) {
 
-        if (result.response.trim() !== 0){
+        if (result.response.length !== 0){
             window.console.log(result.response);
             textbox = document.getElementById('output_text')
 
-            if (textbox.value.length == 0 && textbox.value.trim() !== 0){
+            if (textbox.value.length == 0){
                 textbox.value = result.response
             }else{
                 textbox.value += " " + result.response
@@ -255,4 +256,8 @@ function downsampleBuffer(buffer, rate, sampleRate) {
       offsetBuffer = nextOffsetBuffer;
   }
   return result;
+}
+
+if (!failedToGetUserMedia){
+    beginRecording()
 }
