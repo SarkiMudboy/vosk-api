@@ -11,6 +11,8 @@ let recContext = null
 let recSource = null
 let recNode = null;
 
+let socket = new WebSocket("ws://localhost:2700");
+
 if (navigator.getUserMedia) {
     navigator.getUserMedia(constraints, (stream) => {
         init(stream);
@@ -51,8 +53,10 @@ function endRecording() {
     // timeout = null;
 
     audioBlob = exportWAV(false);
-    // console.log(audioBlob)
-    upload(audioBlob)
+    
+    // upload(audioBlob)
+
+    socket.send(audioBlob)
 
     // this one is for playing the file back
     audioBlobToPlay = exportWAV(true)
@@ -196,38 +200,72 @@ function encodeWAV(samples, context){
     return view;
 }
 
-const upload = async (audioData) => {
+// const upload = async (audioData) => {
 
-    var AjaxURL = 'http://127.0.0.1:5000/media';
+//     var AjaxURL = 'http://127.0.0.1:5000/media';
 
-    var form = new FormData()
+//     var form = new FormData()
     
-    form.append('file', audioData, 'file')
+//     form.append('file', audioData, 'file')
     
-    $.ajax({
-    type: "POST",
-    url: AjaxURL,
-    data: form,
-    processData: false,
-    contentType: false,
-    // contentType: 'application/json;charset=UTF-8',
-    success: function(result) {
+//     $.ajax({
+//     type: "POST",
+//     url: AjaxURL,
+//     data: form,
+//     processData: false,
+//     contentType: false,
+//     // contentType: 'application/json;charset=UTF-8',
+//     success: function(result) {
 
-        if (result.response.length !== 0){
-            window.console.log(result.response);
-            textbox = document.getElementById('output_text')
+//         if (result.response.length !== 0){
+//             window.console.log(result.response);
+//             textbox = document.getElementById('output_text')
 
-            if (textbox.value.length == 0){
-                textbox.value = result.response
-            }else{
-                textbox.value += " " + result.response
-            }
-        }
-    }
-    });
-}
+//             if (textbox.value.length == 0){
+//                 textbox.value = result.response
+//             }else{
+//                 textbox.value += " " + result.response
+//             }
+//         }
+//     }
+//     });
+// }
 
 // ----------------------------
+
+socket.onopen = function(e) {
+  console.log('Started connection to socket...')
+};
+
+socket.onmessage = function(event) {
+
+  data = JSON.parse(event.data)
+
+  if (data.length !== 0){
+
+    window.console.log(data);
+
+    let text_data = (data.text) ? data.text : data.partial
+
+    textbox = document.getElementById('output_text')
+
+    if (textbox.value.length == 0){
+        textbox.value = data.text
+    }else{
+        textbox.value += " " + data.text
+    }
+}
+
+};
+
+socket.onclose = function(event) {
+  console.log('{"eof" : 1}')
+};
+
+socket.onerror = function(error) {
+  console("ERROR");
+};
+
 
 function downsampleBuffer(buffer, rate, sampleRate) {
   if (rate == sampleRate) {
